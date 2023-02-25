@@ -1,9 +1,8 @@
-# Weather Application
+# Web Calendar
 
 ## Description
-An application that takes the name of a city and returns the current weather conditions. The application makes an API call to openweather
-
+An application that shows you your events for a partcular day
 ### Stacks
 - Flask
-- Jinja
 - Python
+- RESTAPI
