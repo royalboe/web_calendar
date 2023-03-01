@@ -6,3 +6,4 @@ An application that shows you your events for a particular day
 - Flask
 - Python
 - RESTAPI
+- Docker
