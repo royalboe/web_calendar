@@ -7,3 +7,4 @@ An application that shows you your events for a particular day
 - Python
 - RESTAPI
 - Docker
+= 
