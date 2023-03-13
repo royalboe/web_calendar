@@ -2,11 +2,12 @@ import sys
 from flask import Flask, jsonify
 from flask_restful import Api, Resource, reqparse, inputs
 from flask_sqlalchemy import SQLAlchemy
+from marshmallow import Schema, fields
 import datetime
 
 
 app = Flask(__name__)
-db = SQLAlchemy(app)
+db = SQLAlchemy()
 api = Api(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///name.db'
