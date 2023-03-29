@@ -1,6 +1,6 @@
 import sys
-from flask import Flask
-from flask_restful import Api, Resource, reqparse, inputs
+from flask import Flask, jsonify
+from flask_restful import Api, Resource, reqparse, inputs, request, abort
 from flask_sqlalchemy import SQLAlchemy
 from marshmallow import Schema, fields
 import datetime
@@ -49,7 +49,7 @@ class Event(db.Model):
 with app.app_context():
     db.create_all()
 
-
+# Event Schema Class
 class EventSchema(Schema):
     id = fields.Integer()
     event = fields.String()
@@ -60,11 +60,9 @@ class TodayEvent(Resource):
     def get(self):
         schema = EventSchema(many=True)
         events = Event.query.filter(Event.date == datetime.date.today()).all()
-        if events:
-            return schema.dump(events)
-
-        result = {"data": "There are no events for today!"}
-        return schema.dump(result)
+        if events is None:
+            abort(404, message="There are no events for today!") 
+        return schema.dump(events)
 
 
 class PostEvent(Resource):
@@ -82,19 +80,106 @@ class PostEvent(Resource):
         return result, 200
 
 
+class DeleteEvent(Resource):
+    def delete(self, event_id):
+        schema = EventSchema()
+        event = Event.query.filter_by(id=event_id).first()
+        if event:
+            db.session.delete(event)
+            db.session.commit()
+            result = {"message": "The event has been deleted!"}
+            return schema.dump(result)
+        abort(404, message="The event doesn't exist!")
+
+class UpdateEvent(Resource):
+    def put(self, event_id):
+        schema = EventSchema()
+        event = Event.query.filter_by(id=event_id).first()
+        if event:
+            args = parser.parse_args()
+            event.event = args['event']
+            event.date = args['date']
+            db.session.commit()
+            result = {"message": "The event has been updated!"}
+            return schema.dump(result)
+        abort(404, message="The event doesn't exist!")
+
+class GetEvent(Resource):
+    def get(self, event_id):
+        schema = EventSchema()
+        event = Event.query.filter_by(id=event_id).first()
+        if event is None:
+            abort(404, message="The event doesn't exist!")
+        return schema.dump(event)
+    
+    # def delete(self, event_id):
+    #     schema = EventSchema()
+    #     event = Event.query.filter_by(id=event_id).first()
+    #     if event is None:
+    #         abort(404, message="The event doesn't exist!")
+    #     db.session.delete(event)
+    #     db.session.commit()
+    #     result = {"message": "The event has been deleted!"}
+    #     return schema.dump(result)
+        
+
+class EventMethods(Resource):
+    schema = EventSchema()
+    def get(self, event_id):
+        global schema
+        event = Event.query.filter_by(id=event_id).first()
+        if event is None:
+            abort(404, message="The event doesn't exist!")
+        return schema.dump(event)
+    
+    def delete(self, event_id):
+        global schema
+        event = Event.query.filter_by(id=event_id).first()
+        if event is None:
+            abort(404, message="The event doesn't exist!")
+        db.session.delete(event)
+        db.session.commit()
+        result = {"message": "The event has been deleted!"}
+        return jsonify(result)
+    
+    def put(self, event_id):
+        global schema
+        event = Event.query.filter_by(id=event_id).first()
+        if event is None:
+            abort(404, message="The event doesn't exist!")
+        args = parser.parse_args()
+        event.event = args['event']
+        event.date = args['date']
+        db.session.commit()
+        result = {"message": "The event has been updated!"}
+        return jsonify(result)
 class GetAllEvent(Resource):
     def get(self):
         schema = EventSchema(many=True)
-        events = Event.query.all()
-        if events:
+        start = request.args.get('start_time')
+        end = request.args.get('end_time')
+        if start and end:
+            # start = datetime.datetime.strptime(start, "%Y-%m-%d")
+            # end = datetime.datetime.strptime(end, "%Y-%m-%d")
+            # events = Event.query.filter(Event.date >= start, Event.date <= end).all()
+            events = Event.query.filter(Event.date.between(start, end)).all()
+            if events is None:
+                abort(404, message="There are no events!")
             return schema.dump(events)
-        result = {"data": "There are no events!"}
-        return schema.dump(result)
+        events = Event.query.all()
+        if events is None:
+            abort(404, message="There are no events!")
+        return schema.dump(events)
+
 
 
 api.add_resource(TodayEvent, '/event/today')
 api.add_resource(PostEvent, '/event')
 api.add_resource(GetAllEvent, '/event')
+api.add_resource(EventMethods, '/event/<int:event_id>')
+# api.add_resource(DeleteEvent, '/event/<int:event_id>')
+# api.add_resource(UpdateEvent, '/event/<int:event_id>')
+# api.add_resource(GetEvent, '/event/<int:event_id>')
 
 # do not change the way you run the program
 if __name__ == '__main__':
